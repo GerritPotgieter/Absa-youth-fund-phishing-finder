@@ -50,6 +50,9 @@ def main():
     known = json.loads(STATE.read_text()) if STATE.exists() else {}
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     candidates = {}
+    report = []
+    rfile = Path(__file__).with_name("redirector.json")
+    last_host = json.loads(rfile.read_text()).get("host") if rfile.exists() else None
 
     # 1. Redirector
     try:
@@ -59,6 +62,11 @@ def main():
         print(f"Redirector: {r.status_code} -> {defang(loc) or '(none)'}")
         if target:
             candidates[target] = "redirector"
+            host = urlsplit(target).hostname
+            if host != last_host:
+                report.append(f"**Redirector target changed:** was {last_host}, now "
+                              f"{defang(target)}")
+                rfile.write_text(json.dumps({"host": host}))
     except requests.RequestException as e:
         print("Redirector: ERROR", e)
 
@@ -102,6 +110,12 @@ def main():
             print(f"{'NEW ' if u not in known else ''}{defang(u)}  "
                   f"{status}  {grade}  op={op} tpl={len(tp)}"
                   f"{'  !! form/fetch present, review for data exfil' if exfil and grade != 'UNRELATED' else ''}")
+            prev = known.get(u)
+            if prev is None and grade in ("CONFIRMED", "SAME TEMPLATE"):
+                report.append(f"**NEW {grade}:** {defang(u)} (HTTP {status}) operator={op} template_markers={len(tp)}"
+                              f"{' FORM/FETCH PRESENT - possible data exfil' if exfil else ''}")
+            elif prev is not None and prev.get("status") != status:
+                report.append(f"Status change: {defang(u)} {prev.get('status')} -> {status}")
             known[u] = {"status": status, "grade": grade, "last_checked": today,
                         "operator_markers": op}
         except requests.RequestException as e:
@@ -109,6 +123,11 @@ def main():
         time.sleep(2)
 
     STATE.write_text(json.dumps(known, indent=2))
+    rp = Path(__file__).with_name("report.md")
+    if report:
+        rp.write_text("\n".join("- " + line for line in report) + "\n")
+    elif rp.exists():
+        rp.unlink()
     print(f"\nSaved {len(known)} sites to {STATE.name}")
 
 

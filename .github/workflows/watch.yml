@@ -1,0 +1,31 @@
+name: Daily scam watch
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 07:00 UTC daily
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - run: python watch.py | tee watch.log
+      - name: Open issue if something new
+        if: hashFiles('report.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "Scam watch $(date -u +%F): new findings" --body-file report.md
+      - name: Save state
+        run: |
+          rm -f report.md
+          git config user.name "scam-watch"
+          git config user.email "scam-watch@users.noreply.github.com"
+          git add known_sites.json redirector.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "Update watch state" && git push)
