@@ -54,21 +54,22 @@ def main():
     rfile = Path(__file__).with_name("redirector.json")
     last_host = json.loads(rfile.read_text()).get("host") if rfile.exists() else None
 
-    # 1. Redirector
+    # 1. Redirector (state = host, or "unreachable"/"no-redirect" so a change is reported)
     try:
         r = get(REDIRECTOR)
         loc = r.headers.get("Location", "")
         target = loc.split("#")[0]
         print(f"Redirector: {r.status_code} -> {defang(loc) or '(none)'}")
+        cur = urlsplit(target).hostname if target else f"no-redirect-{r.status_code}"
         if target:
             candidates[target] = "redirector"
-            host = urlsplit(target).hostname
-            if host != last_host:
-                report.append(f"**Redirector target changed:** was {last_host}, now "
-                              f"{defang(target)}")
-                rfile.write_text(json.dumps({"host": host}))
     except requests.RequestException as e:
         print("Redirector: ERROR", e)
+        cur = "unreachable-dns" if "NameResolution" in str(e) else "unreachable"
+    if cur != last_host:
+        report.append(f"**Redirector changed:** was {last_host}, now {cur}"
+                      + (f" ({defang(target)})" if cur and "." in cur and target else ""))
+        rfile.write_text(json.dumps({"host": cur}))
 
     # 2. urlscan
     for q in QUERIES:
@@ -97,6 +98,8 @@ def main():
             continue
         try:
             r = get(u)
+            if r.status_code in (301, 302) and "blogspot." in r.headers.get("Location", ""):
+                r = get(r.headers["Location"])  # blogspot country/mobile hop
             html = r.text if r.status_code == 200 else ""
             op = [m for m in OPERATOR if m in html]
             tp = [m for m in TEMPLATE if m in html]
