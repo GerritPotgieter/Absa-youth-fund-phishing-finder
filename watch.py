@@ -29,6 +29,7 @@ QUERIES = [
     # regex domain queries are 403 for anonymous urlscan users; try anyway
     r"page.domain:/.*absa.*\.(blogspot\.com|github\.io|pages\.dev|netlify\.app|vercel\.app|web\.app)/",
 ]
+SEEDS = ["https://hdhhsdjdsjhdsj.blogspot.com/"]
 OPERATOR = ["otieu.com/4/10077877", "sc_online_i(1739582",
             "metaink.xyz/ABSA-Youth-Fund"]
 TEMPLATE = ['history.pushState(history.length+1, "message", "#"+Math.random())',
@@ -52,24 +53,34 @@ def main():
     candidates = {}
     report = []
     rfile = Path(__file__).with_name("redirector.json")
-    last_host = json.loads(rfile.read_text()).get("host") if rfile.exists() else None
 
-    # 1. Redirector (state = host, or "unreachable"/"no-redirect" so a change is reported)
+    # 1. Redirector. State: last known target host + whether we were blind (unreachable).
+    st = json.loads(rfile.read_text()) if rfile.exists() else {}
+    last_host, blind = st.get("host"), st.get("blind", False)
     try:
         r = get(REDIRECTOR)
         loc = r.headers.get("Location", "")
         target = loc.split("#")[0]
         print(f"Redirector: {r.status_code} -> {defang(loc) or '(none)'}")
-        cur = urlsplit(target).hostname if target else f"no-redirect-{r.status_code}"
+        blind = False
         if target:
             candidates[target] = "redirector"
+            cur = urlsplit(target).hostname
+            if cur != last_host:
+                report.append(f"**Redirector target changed:** was {last_host}, now "
+                              f"{defang(target)}")
+                last_host = cur
+        else:
+            report.append(f"Redirector answered {r.status_code} with no Location header")
     except requests.RequestException as e:
         print("Redirector: ERROR", e)
-        cur = "unreachable-dns" if "NameResolution" in str(e) else "unreachable"
-    if cur != last_host:
-        report.append(f"**Redirector changed:** was {last_host}, now {cur}"
-                      + (f" ({defang(target)})" if cur and "." in cur and target else ""))
-        rfile.write_text(json.dumps({"host": cur}))
+        if not blind:
+            report.append("Redirector unreachable from the runner (cannot monitor it): "
+                          + ("DNS does not resolve" if "NameResolution" in str(e) else str(e)[:120]))
+        blind = True
+    rfile.write_text(json.dumps({"host": last_host, "blind": blind}))
+    for seed in SEEDS:
+        candidates.setdefault(seed, "seed")
 
     # 2. urlscan
     for q in QUERIES:
