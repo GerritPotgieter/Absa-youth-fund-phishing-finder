@@ -6,15 +6,15 @@
     "operator_markers": []
   },
   "https://absa-fund-sa.blogspot.com/": {
-    "status": "429",
+    "status": "404",
     "grade": "n/a",
-    "last_checked": "2026-11-07",
+    "last_checked": "2026-11-08",
     "operator_markers": []
   },
   "https://absa-fund-sa.blogspot.com/?m=1": {
-    "status": "429",
+    "status": "404",
     "grade": "n/a",
-    "last_checked": "2026-11-07",
+    "last_checked": "2026-11-08",
     "operator_markers": []
   },
   "https://absa-youth-entrepreneurship-fund.blogspot.com/": {
@@ -30,10 +30,14 @@
     "operator_markers": []
   },
   "https://hdhhsdjdsjhdsj.blogspot.com/": {
-    "status": "429",
-    "grade": "n/a",
-    "last_checked": "2026-11-07",
-    "operator_markers": []
+    "status": "200",
+    "grade": "CONFIRMED",
+    "last_checked": "2026-11-08",
+    "operator_markers": [
+      "otieu.com/4/10077877",
+      "sc_online_i(1739582",
+      "metaink.xyz/ABSA-Youth-Fund"
+    ]
   },
   "https://itidyouthere.blogspot.com/?m=1": {
     "status": "404",
