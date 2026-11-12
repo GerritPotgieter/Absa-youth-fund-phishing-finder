@@ -30,10 +30,14 @@
     "operator_markers": []
   },
   "https://hdhhsdjdsjhdsj.blogspot.com/": {
-    "status": "429",
-    "grade": "n/a",
-    "last_checked": "2026-11-11",
-    "operator_markers": []
+    "status": "200",
+    "grade": "CONFIRMED",
+    "last_checked": "2026-11-12",
+    "operator_markers": [
+      "otieu.com/4/10077877",
+      "sc_online_i(1739582",
+      "metaink.xyz/ABSA-Youth-Fund"
+    ]
   },
   "https://itidyouthere.blogspot.com/?m=1": {
     "status": "404",
